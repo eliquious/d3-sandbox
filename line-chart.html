@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<style>
+.line {
+  clip-path: url(#clip);
+}
+
+.zoom {
+  cursor: move;
+  fill: none;
+  pointer-events: all;
+}
+</style>
+<svg width="960" height="500"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+var svg = d3.select("svg"),
+    margin = {top: 20, right: 85, bottom: 110, left: 85},
+    margin2 = {top: 430, right: 85, bottom: 30, left: 85},
+    width = +svg.attr("width") - margin.left - margin.right,
+    height = +svg.attr("height") - margin.top - margin.bottom,
+    height2 = +svg.attr("height") - margin2.top - margin2.bottom;
+
+var focus = svg.append("g")
+      .attr("class", "focus")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var context = svg.append("g")
+      .attr("class", "context")
+      .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
+
+var random = d3.randomNormal(0, 0.05)
+var parseTime = d3.timeParse("%d-%b-%y");
+
+var x0 = d3.scaleTime().rangeRound([0, width]);
+var x1 = d3.scaleTime().rangeRound([0, width]);
+
+var y0 = d3.scaleLinear().rangeRound([height, 0]);
+var y1 = d3.scaleLinear().rangeRound([height, 0]);
+var y2 = d3.scaleLinear().rangeRound([height2, 0]);
+
+var xAxis = d3.axisBottom(x0),
+    yAxisLeft = d3.axisLeft(y0),
+    yAxisRight = d3.axisRight(y1);
+
+var xAxisContext = d3.axisBottom(x1),
+    yAxisContext = d3.axisLeft(y2);
+
+var brush = d3.brushX()
+    .extent([[0, 0], [width, height2]])
+    .on("brush end", brushed);
+
+var zoom = d3.zoom()
+    .scaleExtent([1, Infinity])
+    .translateExtent([[0, 0], [width, height]])
+    .extent([[0, 0], [width, height]])
+    .on("zoom", zoomed);
+
+var line = d3.line()
+    .x(function(d) { return x0(d.date); })
+    .y(function(d) { return y0(d.close); });
+
+var line2 = d3.line()
+    .x(function(d) { return x0(d.date); })
+    .y(function(d) { return y1(d.random); });
+var line4 = d3.line()
+    .x(function(d) { return x0(d.date); })
+    .y(function(d) { return y1(d.random1); });
+var line5 = d3.line()
+    .x(function(d) { return x0(d.date); })
+    .y(function(d) { return y1(d.random2); });
+var line6 = d3.line()
+    .x(function(d) { return x0(d.date); })
+    .y(function(d) { return y1(d.random3); });
+
+var line3 = d3.line()
+    .x(function(d) { return x1(d.date); })
+    .y(function(d) { return y2(d.close); });
+
+svg.append("defs").append("clipPath")
+    .attr("id", "clip")
+  .append("rect")
+    .attr("width", width)
+    .attr("height", height);
+
+d3.tsv("data/aapl.tsv", function(d) {
+  d.date = parseTime(d.date);
+  d.close = +d.close;
+  d.random = random();
+  d.random1 = random();
+  d.random2 = random();
+  d.random3 = random();
+  return d;
+}, function(error, data) {
+  if (error) throw error;
+
+  x0.domain(d3.extent(data, function(d) { return d.date; }));
+  y0.domain(d3.extent(data, function(d) { return d.close; }));
+  y1.domain([-0.4,0.4]);
+  x1.domain(x0.domain());
+  y2.domain(y0.domain());
+
+  // var yAxisRight = d3.axisRight().scale(y1);
+
+  focus.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+  
+  context.append("g")
+      .attr("transform", "translate(0," + height2 + ")")
+      .call(xAxisContext);
+
+  focus.append("g")
+      .attr("class", "axis axis--y")
+      .call(yAxisLeft)
+    .append("text")
+      .attr("fill", "#000")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", "0.71em")
+      .attr("text-anchor", "end")
+      .text("Price ($)");
+
+  focus.append("g")
+        .call(yAxisRight)
+        .attr("class", "y axis")
+        .attr("transform", "translate(" + width + " ,0)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+      .append("text")
+        .style("font-size", "16px")
+        .attr("fill", "#000")
+        .attr("text-anchor", "end")
+        .attr("transform", "rotate(90)translate(230,-50)")
+        .text("Random Numbers");
+        // .attr("y", 6)
+        // .attr("dy", "0.71em");
+
+  focus.append("path")
+      .datum(data)
+      .attr("class", "price line")
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line);
+
+  focus.append("path")
+      .datum(data)
+      .attr("class", "random line")
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line2);
+  focus.append("path")
+      .datum(data)
+      .attr("class", "random3 line")
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line4);
+  focus.append("path")
+      .datum(data)
+      .attr("class", "random4 line")
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line5);
+  focus.append("path")
+      .datum(data)
+      .attr("class", "random5 line")
+      .attr("fill", "none")
+      .attr("stroke", "red")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line6);
+
+  context.append("g")
+      .attr("class", "brush")
+      .call(brush)
+      .call(brush.move, x1.range());
+
+  context.append("path")
+      .datum(data)
+      .attr("class", "line")
+      .attr("fill", "none")
+      .attr("stroke", "steelblue")
+      .attr("stroke-linejoin", "round")
+      .attr("stroke-linecap", "round")
+      .attr("stroke-width", 1.5)
+      .attr("d", line3);
+
+  svg.append("rect")
+      .attr("clip-path", function(d,i) { return "url(#clip)"; })
+      .attr("class", "zoom")
+      .attr("width", width)
+      .attr("height", height)
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+      .call(zoom);
+});
+
+function brushed() {
+  if (d3.event.sourceEvent && d3.event.sourceEvent.type === "zoom") return; // ignore brush-by-zoom
+  var s = d3.event.selection || x1.range();
+  x0.domain(s.map(x1.invert, x1));
+  
+  focus.select(".price").attr("d", line);
+  focus.select(".random").attr("d", line2);
+  focus.select(".random3").attr("d", line4);
+  focus.select(".random4").attr("d", line5);
+  focus.select(".random5").attr("d", line6);
+  focus.select(".axis--x").call(xAxis);
+  focus.select(".axis--y").call(yAxisLeft);
+  svg.select(".zoom").call(zoom.transform, d3.zoomIdentity
+      .scale(width / (s[1] - s[0]))
+      .translate(-s[0], 0));
+}
+
+function zoomed() {
+  if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return; // ignore zoom-by-brush
+  var t = d3.event.transform;
+  x0.domain(t.rescaleX(x1).domain());
+  focus.select(".price").attr("d", line);
+  focus.select(".random").attr("d", line2);
+  focus.select(".random3").attr("d", line4);
+  focus.select(".random4").attr("d", line5);
+  focus.select(".random5").attr("d", line6);
+  focus.select(".axis--x").call(xAxis);
+  focus.select(".axis--y").call(yAxisLeft);
+  context.select(".brush").call(brush.move, x0.range().map(t.invertX, t));
+}
+
+
+</script>
